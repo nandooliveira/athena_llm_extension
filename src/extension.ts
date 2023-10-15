@@ -1,15 +1,29 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as vscode from "vscode";
 import OpenAI from "openai";
+import * as vscode from "vscode";
 
+import { EventService } from "./atena/services/event";
+
+const eventService = new EventService();
 let timer: NodeJS.Timeout | null = null;
 let lastTypedTime = Date.now();
 
 export function activate(context: vscode.ExtensionContext) {
   // Event handler for document changes
-  vscode.workspace.onDidChangeTextDocument(() => {
+  vscode.workspace.onDidChangeTextDocument((event) => {
     lastTypedTime = Date.now();
+    if (event.contentChanges.length === 0) {
+      return;
+    }
+
+    eventService.save({
+      type: "textDocument/didChange",
+      createdAt: lastTypedTime,
+      data: event
+    });
+
+    // TODO: If the change is in last suggestions, send a new suggestionAccepted event
   });
 
   const inlineCompletionProvider =
@@ -18,17 +32,32 @@ export function activate(context: vscode.ExtensionContext) {
       {
         async provideInlineCompletionItems(
           document: vscode.TextDocument,
-          position: vscode.Position
+          position: vscode.Position,
+          context: vscode.InlineCompletionContext,
+          token: vscode.CancellationToken
         ) {
           if (timer) {
             clearTimeout(timer);
           }
 
+          eventService.save({
+            type: "textDocument/inlineCompletionAsked",
+            createdAt: Date.now(),
+            data: {document, position, context, token}
+          });
+
           return new Promise<vscode.InlineCompletionItem[]>(async (resolve, _) => {
+            // TODO: If the last change is in last suggestions, do not suggest again
             timer = setTimeout(async () => {
               if (Date.now() - lastTypedTime >= 2000) {
                 const completionItems: vscode.InlineCompletionItem[] =
                   await fetchCompletionItems(document, position);
+
+                  eventService.save({
+                    type: "textDocument/inlineCompletionReceived",
+                    createdAt: Date.now(),
+                    data: {document, position, context, token, completionItems}
+                  });
 
                 resolve(completionItems);
               } else {
