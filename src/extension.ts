@@ -8,6 +8,8 @@ import { EventService } from "./atena/services/event";
 const eventService = new EventService();
 let timer: NodeJS.Timeout | null = null;
 let lastTypedTime = Date.now();
+let lastSuggestions: string[] = [];
+let lastPrompt: string = "";
 
 export function activate(context: vscode.ExtensionContext) {
   // Event handler for document changes
@@ -23,7 +25,16 @@ export function activate(context: vscode.ExtensionContext) {
       data: event
     });
 
-    // TODO: If the change is in last suggestions, send a new suggestionAccepted event
+    event.contentChanges.forEach((change) => {
+      lastSuggestions.includes(change.text.trim());
+      if (lastSuggestions.includes(change.text.trim())) {
+        eventService.save({
+          type: "textDocument/suggestionAccepted",
+          createdAt: Date.now(),
+          data: { ...event, suggestions: lastSuggestions, prompt: lastPrompt }
+        });
+      }
+    });
   });
 
   const inlineCompletionProvider =
@@ -51,14 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
             timer = setTimeout(async () => {
               if (Date.now() - lastTypedTime >= 2000) {
                 const completionItems: vscode.InlineCompletionItem[] =
-                  await fetchCompletionItems(document, position);
-
-                  eventService.save({
-                    type: "textDocument/inlineCompletionReceived",
-                    createdAt: Date.now(),
-                    data: {document, position, context, token, completionItems}
-                  });
-
+                  await fetchCompletionItems(document, position, context, token);
                 resolve(completionItems);
               } else {
                 resolve([]);
@@ -74,7 +78,9 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function fetchCompletionItems(
   document: vscode.TextDocument,
-  position: vscode.Position
+  position: vscode.Position,
+  context: vscode.InlineCompletionContext,
+  token: vscode.CancellationToken
 ) {
   console.log("Requesting OpenAI");
   const languageId = document.languageId;
@@ -92,11 +98,12 @@ async function fetchCompletionItems(
     textToSend += document.lineAt(i).text + "\n";
   }
 
+  const prompt = `Provide the ${languageId} code that completes the following statement, the answer should contain only the code snippet: ${textToSend}`;
   const response = await openai.chat.completions.create({
     messages: [
       {
         role: "assistant",
-        content: `Provide the ${languageId} code that completes the following statement, the answer should contain only the code snippet: ${textToSend}`,
+        content: prompt,
       },
     ],
     model: "gpt-4",
@@ -108,8 +115,13 @@ async function fetchCompletionItems(
   const choices = response.choices || [];
   const completionItems: vscode.InlineCompletionItem[] = [];
 
+  lastSuggestions = [];
+
   for (let i in choices) {
     const completion = choices[i].message.content?.trim() || "";
+    // also save the range to have a more precise idea of where the suggestion was made
+    lastSuggestions.push(completion);
+
     const item = new vscode.InlineCompletionItem(
       completion,
       new vscode.Range(position, position)
@@ -117,6 +129,13 @@ async function fetchCompletionItems(
 
     completionItems.push(item);
   }
+
+  lastPrompt = prompt;
+  eventService.save({
+    type: "textDocument/inlineCompletionReceived",
+    createdAt: Date.now(),
+    data: {document, position, context, token, prompt, completionItems}
+  });
 
   return completionItems;
 }
