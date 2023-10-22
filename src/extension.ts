@@ -73,13 +73,6 @@ export function activate(context: vscode.ExtensionContext) {
             clearTimeout(timer);
           }
 
-          eventService.save({
-            currentSession,
-            type: "textDocument/inlineCompletionAsked",
-            createdAt: Date.now(),
-            data: { document, position, context, token },
-          });
-
           return new Promise<vscode.InlineCompletionItem[]>(
             async (resolve, _) => {
               timer = setTimeout(async () => {
@@ -88,6 +81,13 @@ export function activate(context: vscode.ExtensionContext) {
                   lastChangeType === ChangeType.insertion &&
                   lastContentChanges.filter(value => lastSuggestions.includes(value)).length === 0
                 ) {
+                  eventService.save({
+                    currentSession,
+                    type: "textDocument/inlineCompletionAsked",
+                    createdAt: Date.now(),
+                    data: { document, position, context, token },
+                  });
+
                   const completionItems: vscode.InlineCompletionItem[] =
                     await fetchCompletionItems(
                       document,
@@ -107,16 +107,25 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
   const command = "atena.startNewSession";
-  const commandHandler = (sessionName: string = guid()) => {
-    currentSession = sessionName;
-    eventService.save({
-      currentSession,
-      type: "session/start",
-      createdAt: Date.now(),
-      data: { sessionName },
+  const commandHandler = async () => {
+    const sessionName = await vscode.window.showInputBox({
+        prompt: 'Enter a name for the new session',
+        placeHolder: 'Subject 1'
     });
+
+    if (sessionName && sessionName?.length > 0) {
+      console.log("Starting new session: ", sessionName);
+      currentSession = sessionName;
+      eventService.save({
+        currentSession,
+        type: "session/start",
+        createdAt: Date.now(),
+        data: { sessionName },
+      });
+    }
   };
 
+  context.subscriptions.push(vscode.commands.registerCommand(command, commandHandler));
   context.subscriptions.push(inlineCompletionProvider);
 }
 
