@@ -1,6 +1,6 @@
 {
-  "name": "copilot-analyser",
-  "displayName": "Copilot Analyser",
+  "name": "atena",
+  "displayName": "Atena",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -15,14 +15,7 @@
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
-      {
-        "command": "copilot-analyser.helloWorld",
-        "title": "Cachacinha"
-      },
-      {
-        "command": "copilot-analyser.currentTime",
-        "title": "Current Time"
-      }
+
     ]
   },
   "scripts": {

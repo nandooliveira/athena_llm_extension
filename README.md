@@ -1,4 +1,4 @@
-# copilot-analyser README
+# Atena README
 
 Project to simulate Copilot for research purpose.
 

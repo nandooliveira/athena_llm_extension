@@ -5,11 +5,25 @@ import OpenAI from "openai";
 
 let timer: NodeJS.Timeout | null = null;
 let lastTypedTime = Date.now();
+let suggestedSnippets: string[] = [];
 
 export function activate(context: vscode.ExtensionContext) {
+  console.log("Extension Started");
   // Event handler for document changes
-  vscode.workspace.onDidChangeTextDocument(() => {
+  vscode.workspace.onDidChangeTextDocument((e) => {
     lastTypedTime = Date.now();
+    e.contentChanges.forEach(change => {
+      if (suggestedSnippets.includes(change.text)) {
+        console.log({
+          suggestions: suggestedSnippets,
+          accepted: change.text
+        });
+      }
+    });
+
+
+
+    // suggestedSnippets.includes(vscode.window.activeTextEditor?.document.getText())
   });
 
   const inlineCompletionProvider =
@@ -24,18 +38,20 @@ export function activate(context: vscode.ExtensionContext) {
             clearTimeout(timer);
           }
 
-          return new Promise<vscode.InlineCompletionItem[]>(async (resolve, _) => {
-            timer = setTimeout(async () => {
-              if (Date.now() - lastTypedTime >= 2000) {
-                const completionItems: vscode.InlineCompletionItem[] =
-                  await fetchCompletionItems(document, position);
+          return new Promise<vscode.InlineCompletionItem[]>(
+            async (resolve, _) => {
+              timer = setTimeout(async () => {
+                if (Date.now() - lastTypedTime >= 1000) {
+                  const completionItems: vscode.InlineCompletionItem[] =
+                    await fetchCompletionItems(document, position);
 
-                resolve(completionItems);
-              } else {
-                resolve([]);
-              }
-            }, 2000);
-          });
+                  resolve(completionItems);
+                } else {
+                  resolve([]);
+                }
+              }, 1000);
+            }
+          );
         },
       }
     );
@@ -55,8 +71,8 @@ async function fetchCompletionItems(
   });
 
   const currentLine = position.line;
-  const startLine = Math.max(currentLine - 10, 0); // 3 lines before, or start of document
-//   const endLine = Math.min(currentLine + 3, document.lineCount - 1); // 3 lines after, or end of document
+  const startLine = Math.max(currentLine - 3, 0); // 3 lines before, or start of document
+  //   const endLine = Math.min(currentLine + 3, document.lineCount - 1); // 3 lines after, or end of document
 
   let textToSend = "";
   for (let i = startLine; i <= currentLine; i++) {
@@ -79,6 +95,7 @@ async function fetchCompletionItems(
   const choices = response.choices || [];
   const completionItems: vscode.InlineCompletionItem[] = [];
 
+  suggestedSnippets = [];
   for (let i in choices) {
     const completion = choices[i].message.content?.trim() || "";
     const item = new vscode.InlineCompletionItem(
@@ -86,6 +103,7 @@ async function fetchCompletionItems(
       new vscode.Range(position, position)
     );
 
+    suggestedSnippets.push(completion);
     completionItems.push(item);
   }
 
