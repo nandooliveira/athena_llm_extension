@@ -131,7 +131,7 @@ async function fetchCompletionItems(
   3) You answer must have only the missing part of the code;
 
   Please provide de completion for the following ${languageId} function:
-  ${textToSend}
+  ${textToSend} # Write the rest of the function here
   `;
   const response = await openai.chat.completions.create({
     messages: [

@@ -5,7 +5,11 @@ export class Completion {
     this.code = code;
   }
 
-  public static from(suggestion: string, sentContext: string, language: string): Completion {
+  public static from(
+    suggestion: string,
+    sentContext: string,
+    language: string
+  ): Completion {
     let code = this.parseSuggestion(suggestion, sentContext, language);
 
     return new Completion(code);
@@ -25,9 +29,13 @@ export class Completion {
     return this.removeSentContext(codeBlock, sentContext);
   }
 
-  private static extractCodeBlock(suggestion: string, language: string): string {
-    const regex = suggestion.includes("```python") ? /```python([\s\S]*?)```/ : /```python([\s\S]*?)```/;
-    const match = suggestion.match(regex);
+  private static extractCodeBlock(
+    suggestion: string,
+    language: string
+  ): string {
+    suggestion = suggestion.replace("```" + language, "```");
+
+    const match = suggestion.match(/```([\s\S]*?)```/);
 
     return match ? match[1].trim() : suggestion;
   }
