@@ -2,14 +2,18 @@
 // Import the module and reference it with the alias vscode in your code below
 import OpenAI from "openai";
 import * as vscode from "vscode";
+import guid from "./atena/helpers/guid";
 
 import { EventService } from "./atena/services/event";
+import { Completion } from "./atena/models/completion";
 
 const eventService = new EventService();
 let timer: NodeJS.Timeout | null = null;
 let lastTypedTime = Date.now();
 let lastSuggestions: string[] = [];
 let lastPrompt: string = "";
+
+let currentSession: string = guid();
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("Extension Started");
@@ -21,18 +25,20 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     eventService.save({
+      currentSession,
       type: "textDocument/didChange",
       createdAt: lastTypedTime,
-      data: event
+      data: event,
     });
 
     event.contentChanges.forEach((change) => {
       lastSuggestions.includes(change.text.trim());
       if (lastSuggestions.includes(change.text.trim())) {
         eventService.save({
+          currentSession,
           type: "textDocument/suggestionAccepted",
           createdAt: Date.now(),
-          data: { ...event, suggestions: lastSuggestions, prompt: lastPrompt }
+          data: { ...event, suggestions: lastSuggestions, prompt: lastPrompt },
         });
       }
     });
@@ -53,26 +59,45 @@ export function activate(context: vscode.ExtensionContext) {
           }
 
           eventService.save({
+            currentSession,
             type: "textDocument/inlineCompletionAsked",
             createdAt: Date.now(),
-            data: {document, position, context, token}
+            data: { document, position, context, token },
           });
 
-          return new Promise<vscode.InlineCompletionItem[]>(async (resolve, _) => {
-            // TODO: If the last change is in last suggestions, do not suggest again
-            timer = setTimeout(async () => {
-              if (Date.now() - lastTypedTime >= 1000) {
-                const completionItems: vscode.InlineCompletionItem[] =
-                  await fetchCompletionItems(document, position, context, token);
-                resolve(completionItems);
-              } else {
-                resolve([]);
-              }
-            }, 1000);
-          });
+          return new Promise<vscode.InlineCompletionItem[]>(
+            async (resolve, _) => {
+              // TODO: If the last change is in last suggestions, do not suggest again
+              timer = setTimeout(async () => {
+                if (Date.now() - lastTypedTime >= 1000) {
+                  const completionItems: vscode.InlineCompletionItem[] =
+                    await fetchCompletionItems(
+                      document,
+                      position,
+                      context,
+                      token
+                    );
+                  resolve(completionItems);
+                } else {
+                  resolve([]);
+                }
+              }, 1000);
+            }
+          );
         },
       }
     );
+
+  const command = "atena.startNewSession";
+  const commandHandler = (sessionName: string = guid()) => {
+    currentSession = sessionName;
+    eventService.save({
+      currentSession,
+      type: "session/start",
+      createdAt: Date.now(),
+      data: { sessionName },
+    });
+  };
 
   context.subscriptions.push(inlineCompletionProvider);
 }
@@ -99,7 +124,15 @@ async function fetchCompletionItems(
     textToSend += document.lineAt(i).text + "\n";
   }
 
-  const prompt = `Provide the ${languageId} code that completes the following statement, the answer should contain only the code snippet: ${textToSend}`;
+  // const prompt = `Provide the ${languageId} code that completes the following statement: \n ${textToSend}`;
+  const prompt = `Considering that:
+  1) I need an answer that contains only code;
+  2) The answer should have only the code completion, without the code snippet that I sent to you;
+  3) You answer must have only the missing part of the code;
+
+  Please provide de completion for the following ${languageId} function:
+  ${textToSend}
+  `;
   const response = await openai.chat.completions.create({
     messages: [
       {
@@ -107,7 +140,8 @@ async function fetchCompletionItems(
         content: prompt,
       },
     ],
-    model: "gpt-4",
+    // model: "gpt-4",
+    model: "gpt-3.5-turbo",
     max_tokens: 100,
     n: 3,
     temperature: 0.9,
@@ -119,23 +153,30 @@ async function fetchCompletionItems(
   lastSuggestions = [];
 
   for (let i in choices) {
-    const completion = choices[i].message.content?.trim() || "";
+    const completion = Completion.from(
+      choices[i].message.content?.trim() || "",
+      textToSend,
+      languageId
+    );
+
     // also save the range to have a more precise idea of where the suggestion was made
-    lastSuggestions.push(completion);
+    lastSuggestions.push(completion.getCode());
 
     const item = new vscode.InlineCompletionItem(
-      completion,
+      completion.getCode(),
       new vscode.Range(position, position)
     );
 
+    console.log(lastSuggestions);
     completionItems.push(item);
   }
 
   lastPrompt = prompt;
   eventService.save({
+    currentSession,
     type: "textDocument/inlineCompletionReceived",
     createdAt: Date.now(),
-    data: {document, position, context, token, prompt, completionItems}
+    data: { document, position, context, token, prompt, completionItems },
   });
 
   return completionItems;
