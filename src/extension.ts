@@ -15,14 +15,29 @@ let lastPrompt: string = "";
 
 let currentSession: string = guid();
 
+enum ChangeType {
+  insertion,
+  deletion,
+}
+let lastChangeType: ChangeType;
+let lastContentChanges: string[];
+
+const DELAY_TO_ASK_SUGGESTION = 1000;
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("Extension Started");
   // Event handler for document changes
   vscode.workspace.onDidChangeTextDocument((event) => {
     lastTypedTime = Date.now();
-    if (event.contentChanges.length === 0) {
+    lastContentChanges = event.contentChanges.map(change => change.text.trim());
+
+    // Do not register empty changes
+    if (event.contentChanges.length === 0 || lastContentChanges.every(str => str.trim() === '')) {
+      lastChangeType = ChangeType.deletion;
       return;
     }
+
+    lastChangeType = ChangeType.insertion;
 
     eventService.save({
       currentSession,
@@ -31,9 +46,9 @@ export function activate(context: vscode.ExtensionContext) {
       data: event,
     });
 
-    event.contentChanges.forEach((change) => {
-      lastSuggestions.includes(change.text.trim());
-      if (lastSuggestions.includes(change.text.trim())) {
+    lastContentChanges.forEach((change) => {
+      lastSuggestions.includes(change);
+      if (lastSuggestions.includes(change)) {
         eventService.save({
           currentSession,
           type: "textDocument/suggestionAccepted",
@@ -67,9 +82,12 @@ export function activate(context: vscode.ExtensionContext) {
 
           return new Promise<vscode.InlineCompletionItem[]>(
             async (resolve, _) => {
-              // TODO: If the last change is in last suggestions, do not suggest again
               timer = setTimeout(async () => {
-                if (Date.now() - lastTypedTime >= 1000) {
+                if (
+                  Date.now() - lastTypedTime >= DELAY_TO_ASK_SUGGESTION &&
+                  lastChangeType === ChangeType.insertion &&
+                  lastContentChanges.filter(value => lastSuggestions.includes(value)).length === 0
+                ) {
                   const completionItems: vscode.InlineCompletionItem[] =
                     await fetchCompletionItems(
                       document,
@@ -81,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
                 } else {
                   resolve([]);
                 }
-              }, 1000);
+              }, DELAY_TO_ASK_SUGGESTION);
             }
           );
         },
