@@ -15,6 +15,9 @@ let lastPrompt: string = "";
 
 let currentSession: string = guid();
 
+// let apiKey = "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";
+let apiKey: string = "";
+
 enum ChangeType {
   insertion,
   deletion,
@@ -24,8 +27,23 @@ let lastContentChanges: string[];
 
 const DELAY_TO_ASK_SUGGESTION = 1000;
 
+const updateApiKey = () => {
+  vscode.window.showInputBox({
+    prompt: 'Enter your OpenAI API Key for Atena'
+  }).then(promptedApiKey => apiKey = promptedApiKey || "");
+};
+
+const checkApiKeyExists = () => {
+  if (apiKey.length === 0) {
+    updateApiKey();
+  }
+};
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("Extension Started");
+
+  checkApiKeyExists();
+
   // Event handler for document changes
   vscode.workspace.onDidChangeTextDocument((event) => {
     lastTypedTime = Date.now();
@@ -75,6 +93,7 @@ export function activate(context: vscode.ExtensionContext) {
 
           return new Promise<vscode.InlineCompletionItem[]>(
             async (resolve, _) => {
+              checkApiKeyExists();
               timer = setTimeout(async () => {
                 if (
                   Date.now() - lastTypedTime >= DELAY_TO_ASK_SUGGESTION &&
@@ -137,7 +156,6 @@ async function fetchCompletionItems(
 ) {
   console.log("Requesting OpenAI");
   const languageId = document.languageId;
-  const apiKey = "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";
   const openai = new OpenAI({
     apiKey: apiKey,
   });
