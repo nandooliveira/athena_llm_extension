@@ -15,8 +15,8 @@ let lastPrompt: string = "";
 
 let currentSession: string = guid();
 
-// let apiKey = "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";
-let apiKey: string = "";
+let apiKey = "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";
+// let apiKey: string = "";
 
 enum ChangeType {
   insertion,
@@ -39,6 +39,18 @@ const checkApiKeyExists = () => {
   }
 };
 
+const getContext = (document: vscode.TextDocument, currentLine: number) => {
+  const startLine = Math.max(currentLine - 3, 0); // 3 lines before, or start of document
+  //   const endLine = Math.min(currentLine + 3, document.lineCount - 1); // 3 lines after, or end of document
+
+  let context = "";
+  for (let i = startLine; i <= currentLine; i++) {
+    context += document.lineAt(i).text + "\n";
+  }
+
+  return context;
+};
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("Extension Started");
 
@@ -49,8 +61,9 @@ export function activate(context: vscode.ExtensionContext) {
     lastTypedTime = Date.now();
     lastContentChanges = event.contentChanges.map(change => change.text.trim());
 
+    const currentLine: number = event.contentChanges[0].range.start.line || 0;
     // Do not register empty changes
-    if (event.contentChanges.length === 0 || lastContentChanges.every(str => str.trim() === '')) {
+    if (event.contentChanges.length === 0 || getContext(event.document, currentLine).trim() === "") {
       lastChangeType = ChangeType.deletion;
       return;
     }
@@ -66,6 +79,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     lastContentChanges.forEach((change) => {
       lastSuggestions.includes(change);
+
+      let anySuggestionAccepted = false;
+
       if (lastSuggestions.includes(change)) {
         eventService.save({
           currentSession,
@@ -73,6 +89,17 @@ export function activate(context: vscode.ExtensionContext) {
           createdAt: Date.now(),
           data: { ...event, suggestions: lastSuggestions, prompt: lastPrompt },
         });
+        anySuggestionAccepted = true;
+      }
+
+      if (!anySuggestionAccepted) {
+        eventService.save({
+          currentSession,
+          type: "textDocument/suggestionIgnored",
+          createdAt: Date.now(),
+          data: { ...event, suggestions: lastSuggestions, prompt: lastPrompt },
+        });
+        lastSuggestions = [];
       }
     });
   });
@@ -114,8 +141,10 @@ export function activate(context: vscode.ExtensionContext) {
                       context,
                       token
                     );
+
                   resolve(completionItems);
                 } else {
+                  lastSuggestions = [];
                   resolve([]);
                 }
               }, DELAY_TO_ASK_SUGGESTION);
@@ -160,14 +189,7 @@ async function fetchCompletionItems(
     apiKey: apiKey,
   });
 
-  const currentLine = position.line;
-  const startLine = Math.max(currentLine - 3, 0); // 3 lines before, or start of document
-  //   const endLine = Math.min(currentLine + 3, document.lineCount - 1); // 3 lines after, or end of document
-
-  let textToSend = "";
-  for (let i = startLine; i <= currentLine; i++) {
-    textToSend += document.lineAt(i).text + "\n";
-  }
+  const codeContext = getContext(document, position.line);
 
   // const prompt = `Provide the ${languageId} code that completes the following statement: \n ${textToSend}`;
   const prompt = `Considering that:
@@ -176,7 +198,7 @@ async function fetchCompletionItems(
   3) You answer must have only the missing part of the code;
 
   Please provide de completion for the following ${languageId} function:
-  ${textToSend} # Write the rest of the function here
+  ${codeContext} # Write the rest of the function here
   `;
   const response = await openai.chat.completions.create({
     messages: [
@@ -200,7 +222,7 @@ async function fetchCompletionItems(
   for (let i in choices) {
     const completion = Completion.from(
       choices[i].message.content?.trim() || "",
-      textToSend,
+      codeContext,
       languageId
     );
 
