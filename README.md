@@ -1,4 +1,4 @@
-# copilot-analyser README
+# Atena README
 
 Project to simulate Copilot for research purpose.
 
@@ -67,5 +67,16 @@ You can author your README using Visual Studio Code. Here are some useful editor
 
 * [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
 * [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+
+## Collected Events
+
+|                 Event                 |                Description                 |
+| ------------------------------------- | ------------------------------------------ |
+| session/started                       | A new session was started                  |
+| textDocument/didChange                | The document was changed                   |
+| textDocument/inlineCompletionReceived | OpenAI returned suggestions                |
+| textDocument/suggestionAccepted       | The developer accepted a suggestion        |
+| textDocument/suggestionIgnored        | The developer have ignored the suggestions |
+| textDocument/inlineCompletionAsked    | The extension asked suggestions to OpenAI  |
 
 **Enjoy!**

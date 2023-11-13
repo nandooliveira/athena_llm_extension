@@ -16,12 +16,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "copilot-analyser.helloWorld",
-        "title": "Cachacinha"
-      },
-      {
-        "command": "copilot-analyser.currentTime",
-        "title": "Current Time"
+        "command": "atena.startNewSession",
+        "title": "Start a new Session"
       }
     ],
     "configuration": {
@@ -69,6 +65,7 @@
   },
   "dependencies": {
     "axios": "^1.5.1",
-    "openai": "^4.11.0"
+    "openai": "^4.11.0",
+    "uuid": "^9.0.1"
   }
 }
