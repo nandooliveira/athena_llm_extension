@@ -1,6 +1,6 @@
 {
-  "name": "copilot-analyser",
-  "displayName": "Copilot Analyser",
+  "name": "atena",
+  "displayName": "Atena",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -23,7 +23,28 @@
         "command": "copilot-analyser.currentTime",
         "title": "Current Time"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Atena",
+      "properties": {
+        "atena.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI Api Key"
+        },
+        "atena.openAIModel": {
+          "type": "string",
+          "default": "gpt-4",
+          "enum": ["gpt-4", "gpt-3.5-turbo", "davinci-002"],
+          "description": "OpenAI Api Model"
+        },
+        "atena.enableTelemetry": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable/disable sending telemetry data."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

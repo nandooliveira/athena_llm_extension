@@ -12,6 +12,8 @@ let lastSuggestions: string[] = [];
 let lastPrompt: string = "";
 
 export function activate(context: vscode.ExtensionContext) {
+  askTelemetryPermissionOnFirstRun(context);
+
   // Event handler for document changes
   vscode.workspace.onDidChangeTextDocument((event) => {
     lastTypedTime = Date.now();
@@ -22,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     eventService.save({
       type: "textDocument/didChange",
       createdAt: lastTypedTime,
-      data: event
+      data: event,
     });
 
     event.contentChanges.forEach((change) => {
@@ -31,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
         eventService.save({
           type: "textDocument/suggestionAccepted",
           createdAt: Date.now(),
-          data: { ...event, suggestions: lastSuggestions, prompt: lastPrompt }
+          data: { ...event, suggestions: lastSuggestions, prompt: lastPrompt },
         });
       }
     });
@@ -54,26 +56,97 @@ export function activate(context: vscode.ExtensionContext) {
           eventService.save({
             type: "textDocument/inlineCompletionAsked",
             createdAt: Date.now(),
-            data: {document, position, context, token}
+            data: { document, position, context, token },
           });
 
-          return new Promise<vscode.InlineCompletionItem[]>(async (resolve, _) => {
-            // TODO: If the last change is in last suggestions, do not suggest again
-            timer = setTimeout(async () => {
-              if (Date.now() - lastTypedTime >= 2000) {
-                const completionItems: vscode.InlineCompletionItem[] =
-                  await fetchCompletionItems(document, position, context, token);
-                resolve(completionItems);
-              } else {
-                resolve([]);
-              }
-            }, 2000);
-          });
+          return new Promise<vscode.InlineCompletionItem[]>(
+            async (resolve, _) => {
+              // TODO: If the last change is in last suggestions, do not suggest again
+              timer = setTimeout(async () => {
+                if (Date.now() - lastTypedTime >= 2000) {
+                  const completionItems: vscode.InlineCompletionItem[] =
+                    await fetchCompletionItems(
+                      document,
+                      position,
+                      context,
+                      token
+                    ) || [];
+                  resolve(completionItems);
+                } else {
+                  resolve([]);
+                }
+              }, 2000);
+            }
+          );
         },
       }
     );
 
   context.subscriptions.push(inlineCompletionProvider);
+}
+
+function getConfiguration(): vscode.WorkspaceConfiguration {
+  return vscode.workspace.getConfiguration("atena");
+}
+
+function getConfigurationValue(configKey: string): string {
+  return getConfiguration().get(configKey) || "";
+}
+
+function getApiKey(): string {
+  return getConfigurationValue("apiKey");
+}
+
+function setApiKey(inputValue: string): void {
+  getConfiguration().update("apiKey", inputValue, true);
+}
+
+function getModel(): string {
+  return getConfigurationValue("openAIModel");
+}
+
+function setUserConsent(consent: boolean): void {
+  getConfiguration().update("enableTelemetry", consent, true);
+}
+
+function isTelemetryEnabled(): string {
+  return getConfigurationValue("enableTelemetry");
+}
+
+function askTelemetryPermissionOnFirstRun(context: vscode.ExtensionContext): void {
+  const isFirstRunKey = "isFirstRun";
+  const globalState = context.globalState;
+  // globalState.update(isFirstRunKey, false);
+  const isFirstRun = Boolean(globalState.get(isFirstRunKey));
+
+  if (!isFirstRun) {
+    // mark extension as already started
+    globalState.update(isFirstRunKey, true);
+
+    // Ask permission to the user
+    vscode.window
+      .showInformationMessage(
+        "Do you allow this extension to collect usage data?",
+        "Yes",
+        "No"
+      )
+      .then((selection) => {
+        setUserConsent(selection === "Yes");
+      });
+  }
+}
+
+function askApiKey(): void {
+  const apiKey = getApiKey();
+
+  if(!apiKey || apiKey === "") {
+    vscode.window.showInputBox({
+      prompt: 'Please enter your OpenAI Api Key.'
+    }).then(inputValue => {
+        // Handle the input value
+        setApiKey(inputValue || "");
+    });
+  }
 }
 
 async function fetchCompletionItems(
@@ -82,16 +155,21 @@ async function fetchCompletionItems(
   context: vscode.InlineCompletionContext,
   token: vscode.CancellationToken
 ) {
-  console.log("Requesting OpenAI");
   const languageId = document.languageId;
-  const apiKey = "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";
+  const apiKey = getApiKey(); // "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";
+
+  if ((!apiKey || apiKey === "") && isTelemetryEnabled()) {
+    askApiKey();
+    return;
+  }
+
   const openai = new OpenAI({
     apiKey: apiKey,
   });
 
   const currentLine = position.line;
   const startLine = Math.max(currentLine - 10, 0); // 3 lines before, or start of document
-//   const endLine = Math.min(currentLine + 3, document.lineCount - 1); // 3 lines after, or end of document
+  //   const endLine = Math.min(currentLine + 3, document.lineCount - 1); // 3 lines after, or end of document
 
   let textToSend = "";
   for (let i = startLine; i <= currentLine; i++) {
@@ -106,7 +184,7 @@ async function fetchCompletionItems(
         content: prompt,
       },
     ],
-    model: "gpt-4",
+    model: getModel(),
     max_tokens: 100,
     n: 3,
     temperature: 0.9,
@@ -134,7 +212,7 @@ async function fetchCompletionItems(
   eventService.save({
     type: "textDocument/inlineCompletionReceived",
     createdAt: Date.now(),
-    data: {document, position, context, token, prompt, completionItems}
+    data: { document, position, context, token, prompt, completionItems },
   });
 
   return completionItems;
