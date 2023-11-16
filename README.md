@@ -1,4 +1,4 @@
-# Atena README
+# Athena LLM README
 
 Project to simulate Copilot for research purpose.
 

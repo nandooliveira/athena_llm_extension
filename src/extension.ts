@@ -2,11 +2,11 @@
 // Import the module and reference it with the alias vscode in your code below
 import OpenAI from "openai";
 import * as vscode from "vscode";
-import guid from "./atena/helpers/guid";
+import guid from "./athena_llm/helpers/guid";
 
-import { Completion } from "./atena/models/completion";
-import { EventService } from "./atena/services/event";
-import Config from "./atena/services/config";
+import { Completion } from "./athena_llm/models/completion";
+import { EventService } from "./athena_llm/services/event";
+import Config from "./athena_llm/services/config";
 
 const eventService = new EventService();
 let timer: NodeJS.Timeout | null = null;
@@ -146,7 +146,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
     );
 
-  const command = "atena.startNewSession";
+  const command = "athena_llm.startNewSession";
   const commandHandler = async () => {
     const sessionName = await vscode.window.showInputBox({
       prompt: "Enter a name for the new session",

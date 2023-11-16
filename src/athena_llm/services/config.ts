@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 export default class Config {
     static config: vscode.WorkspaceConfiguration =
-    vscode.workspace.getConfiguration("atena");
+    vscode.workspace.getConfiguration("athena_llm");
 
     private static getConfigurationValue(configKey: string): string {
         return Config.config.get(configKey) || "";

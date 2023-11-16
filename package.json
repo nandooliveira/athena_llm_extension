@@ -1,6 +1,6 @@
 {
-  "name": "atena",
-  "displayName": "Atena",
+  "name": "athena_llm",
+  "displayName": "Athena LLM",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -16,25 +16,25 @@
   "contributes": {
     "commands": [
       {
-        "command": "atena.startNewSession",
+        "command": "athena_llm.startNewSession",
         "title": "Start a new Session"
       }
     ],
     "configuration": {
-      "title": "Atena",
+      "title": "Athena LLM",
       "properties": {
-        "atena.apiKey": {
+        "athena_llm.apiKey": {
           "type": "string",
           "default": "",
           "description": "OpenAI Api Key"
         },
-        "atena.openAIModel": {
+        "athena_llm.openAIModel": {
           "type": "string",
           "default": "gpt-4",
           "enum": ["gpt-4", "gpt-3.5-turbo", "davinci-002"],
           "description": "OpenAI Api Model"
         },
-        "atena.enableTelemetry": {
+        "athena_llm.enableTelemetry": {
           "type": "boolean",
           "default": false,
           "description": "Enable/disable sending telemetry data."
