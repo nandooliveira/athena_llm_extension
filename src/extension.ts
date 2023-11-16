@@ -16,8 +16,6 @@ let lastPrompt: string = "";
 
 let currentSession: string = guid();
 
-// let apiKey = getApiKey(); // "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";
-
 enum ChangeType {
   insertion,
   deletion,
