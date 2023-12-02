@@ -1,5 +1,5 @@
 {
-  "name": "athena_llm",
+  "name": "Athena LLM",
   "displayName": "Athena LLM",
   "description": "",
   "version": "0.0.1",
@@ -23,18 +23,47 @@
     "configuration": {
       "title": "Athena LLM",
       "properties": {
-        "athena_llm.apiKey": {
+        "Athena LLM.apiKey": {
           "type": "string",
           "default": "",
-          "description": "OpenAI Api Key"
+          "description": "API Key"
         },
-        "athena_llm.openAIModel": {
+        "Athena LLM.apiAddress": {
+          "type": "string",
+          "default": "https://api.openai.com/v1/chat/completions",
+          "description": "API URL"
+        },
+        "Athena LLM.model": {
           "type": "string",
           "default": "gpt-4",
-          "enum": ["gpt-4", "gpt-3.5-turbo", "davinci-002"],
-          "description": "OpenAI Api Model"
+          "description": "Model"
         },
-        "athena_llm.enableTelemetry": {
+        "Athena LLM.maxTokens": {
+          "type": "number",
+          "default": 1000,
+          "description": "Maximum number of tokens allowed for suggestion responses."
+        },
+        "Athena LLM.temperature": {
+          "type": "number",
+          "default": 0.9,
+          "description": "Model's temperature setting."
+        },
+        "Athena LLM.numberOfSuggestions": {
+          "type": "number",
+          "default": 3,
+          "description": "Desired number of suggestions to be received from the model."
+        },
+        "Athena LLM.contextSize": {
+          "type": "number",
+          "default": 3,
+          "description": "Number of lines of code to be sent to the model for contextualizing the prompt."
+        },
+        "Athena LLM.serverAddress": {
+          "type": "string",
+          "default": "http://localhost:8000",
+          "description": "The server address where the collected data will be sent for the application."
+        },
+        "Athena LLM.enableTelemetry": {
           "type": "boolean",
           "default": false,
           "description": "Enable/disable sending telemetry data."
