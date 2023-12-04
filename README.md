@@ -1,72 +1,39 @@
-# Athena LLM README
+# Athena LLM
 
-Project to simulate Copilot for research purpose.
+This extension is a LLM based code assistant designed to help collecting data in research related to the use of LLMs in programming assistance.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+This extension provides inline completion suggestions based on the OpenAI Codex model or any other compatible API.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+This extension requires an OpenAI API key. You can get one [here](https://beta.openai.com/).
+This extension also requires an API to receive the developer's actions.
+
+## Installation
+
+1. Clone this repository `git clone git@github.com:nandooliveira/athena_llm.git`.
+2. Get inside the cloned repository `cd athena_llm`.
+3. Launch VSCode and access the Extensions view by clicking on the Extensions icon located in the Activity Bar on the left side of the window, or use the shortcut `Ctrl+Shift+X`.
+4. In the Extensions pane, click on the `...` (More Actions) button at the top-right corner and select `Install from VSIX...`.
+5. Navigate to the directory containing the cloned AthenaLLM repository, locate the `.vsix` file, and select it for installation.
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+```json
+{
+  "Athena LLM.apiAddress": "https://api.openai.com/v1/chat/completions",
+  "Athena LLM.apiKey": "openai_api_key",
+  "Athena LLM.contextSize": 3,
+  "Athena LLM.enableTelemetry": true,
+  "Athena LLM.maxTokens": 1000,
+  "Athena LLM.model": "gpt-4",
+  "Athena LLM.numberOfSuggestions": 3,
+  "Athena LLM.serverAddress": "http://localhost:8000",
+  "Athena LLM.temperature": 0.9
+}
+```
 
 ## Collected Events
 
@@ -78,5 +45,3 @@ You can author your README using Visual Studio Code. Here are some useful editor
 | textDocument/suggestionAccepted       | The developer accepted a suggestion        |
 | textDocument/suggestionIgnored        | The developer have ignored the suggestions |
 | textDocument/inlineCompletionAsked    | The extension asked suggestions to OpenAI  |
-
-**Enjoy!**

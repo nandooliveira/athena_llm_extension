@@ -26,11 +26,12 @@ let lastContentChanges: string[];
 const DELAY_TO_ASK_SUGGESTION = 1000;
 
 const getContext = (document: vscode.TextDocument, currentLine: number) => {
-  const startLine = Math.max(currentLine - 3, 0); // 3 lines before, or start of document
-  //   const endLine = Math.min(currentLine + 3, document.lineCount - 1); // 3 lines after, or end of document
+  const contextSize = Config.getContextSize();
+  const startLine = Math.max(currentLine - contextSize, 0); // lines before, or start of document
+  const endLine = Math.min(currentLine + contextSize, document.lineCount - 1); // lines after, or end of document
 
   let context = "";
-  for (let i = startLine; i <= currentLine; i++) {
+  for (let i = startLine; i <= endLine; i++) {
     context += document.lineAt(i).text + "\n";
   }
 
@@ -197,6 +198,7 @@ async function fetchCompletionItems(
   Please provide de completion for the following ${languageId} function:
   ${codeContext} # Write the rest of the function here
   `;
+
   const response = await openai.chat.completions.create({
     messages: [
       {
@@ -205,9 +207,9 @@ async function fetchCompletionItems(
       },
     ],
     model: Config.getModel(),
-    max_tokens: 100,
-    n: 3,
-    temperature: 0.9,
+    max_tokens: Config.getMaxTokens(),
+    n: Config.getNumberOfSuggestions(),
+    temperature: Config.getTemperature(),
   });
 
   const choices = response.choices || [];
